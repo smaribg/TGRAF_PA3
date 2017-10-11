@@ -162,15 +162,19 @@ public class Matrix {
 		matrix.put(15, tmp.get(15));
 	}
 
-	public void setShaderMatrix(int shaderMatrixPointer)
-	{
-		this.shaderMatrixPointer = shaderMatrixPointer;
-		Gdx.gl.glUniformMatrix4fv(shaderMatrixPointer, 1, false, matrix);
-	}
-
-	public void setShaderMatrix()
-	{
-		Gdx.gl.glUniformMatrix4fv(shaderMatrixPointer, 1, false, matrix);
+//	public void setShaderMatrix(int shaderMatrixPointer)
+//	{
+//		this.shaderMatrixPointer = shaderMatrixPointer;
+//		Gdx.gl.glUniformMatrix4fv(shaderMatrixPointer, 1, false, matrix);
+//	}
+//
+//	public void setShaderMatrix()
+//	{
+//		Gdx.gl.glUniformMatrix4fv(shaderMatrixPointer, 1, false, matrix);
+//	}
+	
+	public FloatBuffer getMatrix(){
+		return matrix;
 	}
 
 
