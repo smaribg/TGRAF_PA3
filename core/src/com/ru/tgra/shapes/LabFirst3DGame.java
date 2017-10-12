@@ -17,12 +17,15 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 
 	Shader shader;
 	private Camera cam1;
-	private Camera cam2;
+	private Camera orthoCam;
 	private int angle;
 	private float fov = 90.0f;
 	private float velocity = 0.0f;
 	private float gravity = -9.8f;
 	private ArrayList<Wall> walls;
+	private ArrayList<Wall> floors;
+
+	private ArrayList<Coin> coins;
 	boolean mouse = false;
 	float verticalAngle = 0;
 	float horizontalAngle = 0;
@@ -36,6 +39,9 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		
 		shader = new Shader();
 		walls = new ArrayList<Wall>();
+		floors = new ArrayList<Wall>();
+
+		coins = new ArrayList<Coin>();
 		Gdx.input.setInputProcessor(this);
 
 		
@@ -70,13 +76,12 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		//OrthographicProjection3D(-2, 2, -2, 2, 1, 100);
 		cam1 = new Camera();
 		cam1.look(new Point3D(-3,4,-3), new Point3D(0,4,0), new Vector3D(0,1,0));
-		cam1.look(new Point3D(-3,4,-3), new Point3D(0,4,0), new Vector3D(0,1,0));
 
 		
-		cam2 = new Camera();
-		cam2.look(new Point3D(-3,4,-3), new Point3D(0,4,0), new Vector3D(0,1,0));
+		orthoCam = new Camera();
+		orthoCam.orthographicProjection(-4, 4, -4, 4, 1f, 50);
 		
-		setupWalls();	
+		setupLevel();	
 	}
 	
 	private void handleInput(float deltaTime)
@@ -95,45 +100,21 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 //		}
 		if(Gdx.input.isKeyPressed(Input.Keys.A)) {
 			cam1.slide(-3.0f * deltaTime,  0,  0);
-			cam2.slide(-3.0f * deltaTime,  0,  0);
-
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.D)) {
 			cam1.slide(3.0f * deltaTime,  0, 0);
-			cam2.slide(3.0f * deltaTime,  0, 0);
-
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.W)) {
 			cam1.slide(0, 0, -3.0f * deltaTime);
-			cam2.slide(0, 0, -3.0f * deltaTime);
-
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.S)) {
 			cam1.slide(0, 0, 3.0f * deltaTime);
-			cam2.slide(0, 0, 3.0f * deltaTime);
 		}
 
 		if(Gdx.input.isKeyPressed(Input.Keys.R)) {
 			cam1.slide(0, 3.0f * deltaTime, 0);
 		}
-		if(Gdx.input.isKeyPressed(Input.Keys.F)) {
-			cam1.slide(0, -3.0f * deltaTime, 0);
-		}
-		if(Gdx.input.isKeyPressed(Input.Keys.Q)) {
-			cam1.roll(-90.0f * deltaTime);
-		}
-		if(Gdx.input.isKeyPressed(Input.Keys.E)) {
-			cam1.roll(90.0f * deltaTime);
-		}
-		if(Gdx.input.isKeyPressed(Input.Keys.T)) {
-			fov -= 30.0f * deltaTime;
-		}
-		if(Gdx.input.isKeyPressed(Input.Keys.G)) {
-			fov += 30.0f * deltaTime;
-		}
-		if(Gdx.input.isKeyJustPressed(Input.Keys.V)) {
-			mouse = !mouse;
-		}
+		
 		if(Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
 			System.exit(0);
 		}
@@ -148,18 +129,7 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		//do all updates to the game
 		
 		// Walls
-		if(cam1.eye.x <= -4f){
-			cam1.eye.x = -4f;
-		}
-		if(cam1.eye.x >= 4f){
-			cam1.eye.x = 4f;
-		}
-		if(cam1.eye.z <= -4f){
-			cam1.eye.z = -4f;
-		}
-		if(cam1.eye.z >= 4f){
-			cam1.eye.z = 4f;
-		}
+
 		if(cam1.eye.y <= 1){
 			cam1.eye.y = 1;
 			velocity = 0;
@@ -167,7 +137,7 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		
 		// Collisions
 		for(Wall w: walls){
-			checkCollisionOnWall(w);
+			checkCollisionOnWall(w,cam1.eye);
 		}
 		
 		
@@ -176,8 +146,11 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		cam1.eye.y += velocity * deltaTime;
 		
 		velocity +=gravity * deltaTime;
-		cam2.eye.y += velocity * deltaTime;
 		
+		// Diamonds
+		for(Coin d : coins){
+			d.rotation.y += d.rotationSpeed * deltaTime;
+		}
 
 	}
 	
@@ -185,60 +158,106 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 	{
 		//do all actual drawing and rendering here
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
-		
-		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-		cam1.perspectiveProjection(fov, 2.0f, 0.1f, 100.0f);
-		shader.setViewMatrix(cam1.getViewMatrix());
-		shader.setProjectionMatrix(cam1.getProjectionMatrix());
-		if(mouse){
+		for(int viewNum = 0; viewNum < 2; viewNum++ ){
+			if(viewNum == 0){
+				Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+				cam1.perspectiveProjection(fov, 2.0f, 0.1f, 100.0f);
+				shader.setViewMatrix(cam1.getViewMatrix());
+				shader.setProjectionMatrix(cam1.getProjectionMatrix());
+				
+				// Mouse stuff
+				float deltaTime = Gdx.graphics.getDeltaTime();
+				int xpos, ypos;
+				xpos = Gdx.input.getX();
+				ypos = Gdx.input.getY();
+				Gdx.input.setCursorPosition(Gdx.graphics.getWidth()/2, Gdx.graphics.getHeight()/2);
+				Gdx.input.setCursorCatched(true);
+				horizontalAngle += 0.05f * deltaTime * (float)(Gdx.graphics.getWidth()/2 - xpos );
+				verticalAngle   += 0.05f * deltaTime * (float)( Gdx.graphics.getHeight()/2 - ypos );
+				Vector3D direction = new Vector3D(
+						(float)(Math.cos(verticalAngle) * Math.sin(horizontalAngle)),
+						(float)Math.sin(verticalAngle),
+						(float)(Math.cos(verticalAngle) * Math.cos(horizontalAngle))
+						);
+				
+				Vector3D right = new Vector3D(
+						(float)Math.sin(horizontalAngle - 3.14f/2.0f),
+						0,
+						(float)Math.cos(horizontalAngle - 3.14f/2.0f)
+						);
+				Vector3D up = right.cross(direction);
+				Point3D p = new Point3D();
+				p.set(cam1.eye.x, cam1.eye.y, cam1.eye.z);
+				p.add(direction);
+				p.y = cam1.eye.y;
+				cam1.look(cam1.eye, p, new Vector3D(0,1,0));
+				
+			}else{
+				Gdx.gl.glViewport(3*Gdx.graphics.getWidth()/4,2*Gdx.graphics.getHeight()/3, Gdx.graphics.getWidth()/4,Gdx.graphics.getHeight()/3);
+				orthoCam.look(new Point3D(cam1.eye.x,5.0f,cam1.eye.z),cam1.eye,new Vector3D(0,0,-1));
+				shader.setViewMatrix(orthoCam.getViewMatrix());
+				shader.setProjectionMatrix(orthoCam.getProjectionMatrix());
+				Gdx.gl.glScissor(3*Gdx.graphics.getWidth()/4,2*Gdx.graphics.getHeight()/3, Gdx.graphics.getWidth()/4,Gdx.graphics.getHeight()/3);
+				Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
+				Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+				Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
+			}
 			
-			// Mouse
-			float deltaTime = Gdx.graphics.getDeltaTime();
-			int xpos, ypos;
-			xpos = Gdx.input.getX();
-			ypos = Gdx.input.getY();
-			Gdx.input.setCursorPosition(Gdx.graphics.getWidth()/2, Gdx.graphics.getHeight()/2);
-			Gdx.input.setCursorCatched(true);
-			horizontalAngle += 0.05f * deltaTime * (float)(Gdx.graphics.getWidth()/2 - xpos );
-			verticalAngle   += 0.05f * deltaTime * (float)( Gdx.graphics.getHeight()/2 - ypos );
-			Vector3D direction = new Vector3D(
-					(float)(Math.cos(verticalAngle) * Math.sin(horizontalAngle)),
-					(float)Math.sin(verticalAngle),
-					(float)(Math.cos(verticalAngle) * Math.cos(horizontalAngle))
-					);
 			
-			Vector3D right = new Vector3D(
-					(float)Math.sin(horizontalAngle - 3.14f/2.0f),
-					0,
-					(float)Math.cos(horizontalAngle - 3.14f/2.0f)
-					);
-			Vector3D up = right.cross(direction);
-			Point3D p = new Point3D();
-			p.set(cam1.eye.x, cam1.eye.y, cam1.eye.z);
-			p.add(direction);
-			cam1.look(cam1.eye, p, up);
-			
-		}
-
-
-		
-		ModelMatrix.main.loadIdentityMatrix();
-		
-		shader.setLightPosition(3.0f, 3.0f, 0.0f, 1.0f);
-		shader.setLightDiffuse(1.0f, 1.0f, 1.0f, 1.0f);
-			
-			
-		for(Wall w: walls){
 			ModelMatrix.main.loadIdentityMatrix();
-			shader.setMaterialDiffuse(w.color.r,  w.color.g,  w.color.b, 1.0f);
-			ModelMatrix.main.pushMatrix();
-			ModelMatrix.main.addTranslation(w.pos.x, w.pos.y, w.pos.z);
-			ModelMatrix.main.addScale(w.scale.x, w.scale.y, w.scale.z);
-			shader.setModelMatrix(ModelMatrix.main.getMatrix());
-			BoxGraphic.drawSolidCube();
-			ModelMatrix.main.popMatrix();
-		}
+			shader.setLightPosition(5.0f, 5.0f, -5.0f, 1.0f);
+			shader.setLightDiffuse(1.0f, 1.0f, 0.8f, 1.0f);
+
+			// Walls
+			for(Wall w: walls){
+				ModelMatrix.main.loadIdentityMatrix();
+				shader.setMaterialDiffuse(w.color.r,  w.color.g,  w.color.b, 1.0f);
+				ModelMatrix.main.pushMatrix();
+				ModelMatrix.main.addTranslation(w.pos.x, w.pos.y, w.pos.z);
+				ModelMatrix.main.addScale(w.scale.x, w.scale.y, w.scale.z);
+				shader.setModelMatrix(ModelMatrix.main.getMatrix());
+				BoxGraphic.drawSolidCube();
+				ModelMatrix.main.popMatrix();
+			}
 			
+			for(Wall w: floors){
+				ModelMatrix.main.loadIdentityMatrix();
+				shader.setMaterialDiffuse(w.color.r,  w.color.g,  w.color.b, 1.0f);
+				ModelMatrix.main.pushMatrix();
+				ModelMatrix.main.addTranslation(w.pos.x, w.pos.y, w.pos.z);
+				ModelMatrix.main.addScale(w.scale.x, w.scale.y, w.scale.z);
+				shader.setModelMatrix(ModelMatrix.main.getMatrix());
+				BoxGraphic.drawSolidCube();
+				ModelMatrix.main.popMatrix();
+			}
+			
+			// Diamonds
+			for(Coin d: coins){
+				ModelMatrix.main.loadIdentityMatrix();
+				shader.setMaterialDiffuse(d.color.r,  d.color.g,  d.color.b, 1.0f);
+				ModelMatrix.main.pushMatrix();
+				ModelMatrix.main.addTranslation(d.pos.x, d.pos.y, d.pos.z);
+				ModelMatrix.main.addRotationY(d.rotation.y);
+				ModelMatrix.main.addScale(d.scale.x, d.scale.y, d.scale.z);
+				shader.setModelMatrix(ModelMatrix.main.getMatrix());
+				SphereGraphic.drawSolidSphere();
+				ModelMatrix.main.popMatrix();
+			}
+			
+			if(viewNum == 1){
+				ModelMatrix.main.loadIdentityMatrix();
+				shader.setMaterialDiffuse(1.0f, 0, 0, 1.0f);
+				ModelMatrix.main.pushMatrix();
+				ModelMatrix.main.addTranslation(cam1.eye.x,cam1.eye.y,cam1.eye.z);
+				ModelMatrix.main.addScale(1, 1, 1);
+
+				shader.setModelMatrix(ModelMatrix.main.getMatrix());
+				SphereGraphic.drawSolidSphere();
+				ModelMatrix.main.popMatrix();
+			}
+
+		}
+					
 	}
 
 	@Override
@@ -246,8 +265,7 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		
 		//put the code inside the update and display methods, depending on the nature of the code
 		update();
-		display();
-
+		display();		
 	}
 
 	@Override
@@ -298,24 +316,85 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		return false;
 	}
 	
-	private void setupWalls(){	
-		Color wallColor = new Color(0.7f,0.13f,0.13f);
-		Color floorColor = new Color(0.93f,0.9f,0.66f);
+	private void setupLevel(){	
+		Color wallColor = new Color(0.5f,0.5f,0.5f);
+		Color floorColor = new Color(0.63f,0.32f,0.18f);
+		Color coinColor = new Color(1.0f,0.8f,0);
+		
 		// Walls
-		walls.add(new Wall(new Point3D(-5, 0, 0), new Point3D(1.0f, 10.0f, 10.0f), wallColor));
-		walls.add(new Wall(new Point3D(5, 0, 0), new Point3D(1.0f, 10.0f, 10.0f),wallColor));
-		walls.add(new Wall(new Point3D(0, 0, 5), new Point3D(10.0f, 10.0f, 1.0f),wallColor));
-		walls.add(new Wall(new Point3D(0, 0, -5), new Point3D(10.0f, 10.0f, 1.0f),wallColor));
+		walls.add(new Wall(new Point3D(-5, 2.5f, -5.0f), new Point3D(2.0f, 5.0f, 20.0f), wallColor));
+		walls.add(new Wall(new Point3D(5, 2.5f, -5.0f), new Point3D(2.0f, 5.0f, 20.0f),wallColor));
+		walls.add(new Wall(new Point3D(0, 2.5f, 5), new Point3D(10.0f, 5.0f, 2.0f),wallColor));
+		walls.add(new Wall(new Point3D(0, 1, 0), new Point3D(2.0f, 2.0f, 2.0f),wallColor));
+
 		
 		// Floor
-		walls.add(new Wall(new Point3D(0, 0, 0), new Point3D(10.0f, 1.0f, 10.0f),floorColor));
+		floors.add(new Wall(new Point3D(0, 0, -5), new Point3D(10.0f, 1.0f, 20.0f),floorColor));
+		floors.add(new Wall(new Point3D(0, 0, -25), new Point3D(10.0f, 1.0f, 20.0f),floorColor));
+
 		
-		walls.add(new Wall(new Point3D(0, 1.0f, 0), new Point3D(2.0f, 2.0f, 2.0f),floorColor));
+		// Coins
+		coins.add(new Coin(new Point3D(3,1,3), new Point3D(0.01f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
+		coins.add(new Coin(new Point3D(-3,1,3), new Point3D(0.01f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
+		coins.add(new Coin(new Point3D(3,1,-3), new Point3D(0.01f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
+		coins.add(new Coin(new Point3D(-3,1,-3), new Point3D(0.01f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
 
 
 	}
 	
-	private void checkCollisionOnWall(Wall wall){
-		
+	private void checkCollisionOnWall(Wall wall, Point3D pos){
+		float radius = 0.5f;
+		float maxX = wall.pos.x+wall.scale.x/2+radius;
+		float minX = wall.pos.x-wall.scale.x/2-radius;
+		float maxZ = wall.pos.z+wall.scale.z/2+radius;
+		float minZ = wall.pos.z-wall.scale.z/2-radius;
+
+		if(pos.x >= minX && pos.x <= maxX 
+			&& pos.z >= minZ && pos.z <= maxZ){
+			float minDis = 100.0f;
+			int d = 0;
+			
+			if(Math.abs(maxZ-pos.z) < minDis){
+				minDis = Math.abs(maxZ-pos.z);
+				d = 3;
+			}
+			
+			if(Math.abs(minZ-pos.z) < minDis){
+				minDis = Math.abs(minZ-pos.z);
+				d = 4;
+			}
+			if(Math.abs(maxX-pos.x) < minDis){
+				minDis = Math.abs(maxX-pos.x);
+				d = 1;
+			}
+			if(Math.abs(minX-pos.x) < minDis){
+				minDis = Math.abs(minX-pos.x);
+				d = 2;
+			}
+			
+			if(d == 1){
+				System.out.println("maxx");
+
+				pos.x = maxX;
+			}
+			if(d == 2){
+				System.out.println("minx");
+
+				pos.x = minX;
+			}
+			if(d == 3){
+				System.out.println("maxz");
+
+				pos.z = maxZ;
+			}
+			if(d == 4){
+				System.out.println("minz");
+
+				pos.z = minZ;
+			}
+
+		}
 	}
+	
+	
 }
