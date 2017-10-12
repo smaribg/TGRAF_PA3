@@ -190,6 +190,7 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		cam1.perspectiveProjection(fov, 2.0f, 0.1f, 100.0f);
 		shader.setViewMatrix(cam1.getViewMatrix());
 		shader.setProjectionMatrix(cam1.getProjectionMatrix());
+		shader.setEyePosition(cam1.eye.x, cam1.eye.y, cam1.eye.z, 1.0f);
 		if(mouse){
 			
 			// Mouse
@@ -225,12 +226,15 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		ModelMatrix.main.loadIdentityMatrix();
 		
 		shader.setLightPosition(3.0f, 3.0f, 0.0f, 1.0f);
-		shader.setLightDiffuse(1.0f, 1.0f, 1.0f, 1.0f);
+		shader.setLightColor(0.4f, 0.4f, 0.4f, 1.0f);
+		shader.setGlobalAmbient(0.3f, 0.3f, 0.3f, 1.0f);
 			
 			
 		for(Wall w: walls){
 			ModelMatrix.main.loadIdentityMatrix();
 			shader.setMaterialDiffuse(w.color.r,  w.color.g,  w.color.b, 1.0f);
+			shader.setMaterialShininess(50.0f);
+			shader.setMaterialEmission(0.0f, 0.0f, 0.0f, 1.0f);
 			ModelMatrix.main.pushMatrix();
 			ModelMatrix.main.addTranslation(w.pos.x, w.pos.y, w.pos.z);
 			ModelMatrix.main.addScale(w.scale.x, w.scale.y, w.scale.z);
