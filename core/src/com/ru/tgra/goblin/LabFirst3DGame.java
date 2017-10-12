@@ -1,4 +1,4 @@
-package com.ru.tgra.shapes;
+package com.ru.tgra.goblin;
 
 
 import com.badlogic.gdx.ApplicationAdapter;
@@ -22,8 +22,8 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 	private ArrayList<Wall> floors;
 	private Wall elevator;
 	private int numberOfCoins = 0;
-	float eleMin = 0.4f;
-	float eleMax = 2.0f;
+	float eleMin = -0.58f;
+	float eleMax = 1.0f;
 	boolean eleUp = true;
 	
 	private Point3D lastMousePos;
@@ -418,7 +418,7 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		coins.add(new Coin(new Point3D(10,2.5f,-40), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
 
 		//Elevator
-		elevator = new Wall(new Point3D(0, 0.4f, -14.5f), new Point3D(1.0f, 0.2f, 1.0f),wallColor);
+		elevator = new Wall(new Point3D(0, -1.6f, -14.5f), new Point3D(1.0f, 2.2f, 1.0f),wallColor);
 		floors.add(elevator);
 	}
 	

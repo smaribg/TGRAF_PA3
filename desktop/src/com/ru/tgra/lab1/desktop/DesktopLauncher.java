@@ -2,7 +2,7 @@
 
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
-import com.ru.tgra.shapes.LabFirst3DGame;
+import com.ru.tgra.goblin.LabFirst3DGame;
 
 public class DesktopLauncher {
 	public static void main (String[] arg) {

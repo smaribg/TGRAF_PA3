@@ -1,4 +1,4 @@
-package com.ru.tgra.shapes;
+package com.ru.tgra.goblin;
 
 import java.nio.FloatBuffer;
 
