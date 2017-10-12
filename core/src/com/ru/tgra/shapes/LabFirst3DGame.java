@@ -209,8 +209,12 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 			
 			
 			ModelMatrix.main.loadIdentityMatrix();
-			shader.setLightPosition(0.0f, 8.0f, 3.0f, 1.0f);
+			shader.setLightPosition(0.0f, 8.0f, -15.0f, 1.0f);
 			shader.setLightColor(0.4f, 0.4f, 0.4f, 1.0f);
+			shader.setLight2Position(0.0f, 2.0f, 2.0f, 1.0f);
+			shader.setLight2Color(0.4f, 0.4f, 0.4f, 1.0f);
+			shader.setDirLightPosition(0.0f, 2.0f, 2.0f, 1.0f);
+			shader.setDirLightColor(0.4f, 0.4f, 0.4f, 1.0f);
 			shader.setGlobalAmbient(0.3f, 0.25f, 0.25f, 1.0f);
 
 			// Walls
