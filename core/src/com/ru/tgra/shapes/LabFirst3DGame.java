@@ -6,12 +6,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.scenes.scene2d.ui.List;
 
-import java.nio.FloatBuffer;
 import java.util.ArrayList;
 
-import com.badlogic.gdx.utils.BufferUtils;
 
 public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor {
 
@@ -24,6 +21,7 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 	private ArrayList<Wall> walls;
 	private ArrayList<Wall> floors;
 	private Wall elevator;
+	private int numberOfCoins = 0;
 	float eleMin = 0.4f;
 	float eleMax = 2.0f;
 	boolean eleUp = true;
@@ -92,18 +90,6 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 	
 	private void handleInput(float deltaTime)
 	{
-		if(Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-			cam1.yaw(90.0f * deltaTime);  	
-		}
-		if(Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-			cam1.yaw(-90.0f * deltaTime);
-		}
-//		if(Gdx.input.isKeyPressed(Input.Keys.UP)) {
-//			cam.pitch(90.0f * deltaTime);
-//		}
-//		if(Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-//			cam.pitch(-90.0f * deltaTime);
-//		}
 		if(Gdx.input.isKeyPressed(Input.Keys.A)) {
 			cam1.slide(-3.0f * deltaTime,  0,  0);
 		}
@@ -116,14 +102,12 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		if(Gdx.input.isKeyPressed(Input.Keys.S)) {
 			cam1.slide(0, 0, 3.0f * deltaTime);
 		}
-
 		if(Gdx.input.isKeyPressed(Input.Keys.R)) {
 			mouseSensitivity += 5.0f * deltaTime;
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.F)) {
 			mouseSensitivity -= 5.0f * deltaTime;
 		}
-		
 		if(Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
 			System.exit(0);
 		}
@@ -133,25 +117,25 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 	{
 		float deltaTime = Gdx.graphics.getDeltaTime();
 		
-		System.out.println(velocity);
 		handleInput(deltaTime);
 		
-		// Collisions
+		// Walls
 		for(Wall w: walls){
 			checkCollisionOnWall(w,cam1.eye);
 		}
 		checkCollisionOnWall(elevator,cam1.eye);
 		for(Coin c: coins){
-			checkCollisionOnCoin(c,cam1.eye);
+			if(!c.pickedUp){
+				checkCollisionOnCoin(c,cam1.eye);
+			}
 		}
 		
-		
-				
 		// Diamonds
 		for(Coin d : coins){
 			d.rotation.y += d.rotationSpeed * deltaTime;
 		}
 		
+		// Elevator
 		if(eleUp){
 			if(elevator.pos.y <= eleMax){
 				elevator.pos.y += 0.5f*deltaTime;
@@ -168,6 +152,7 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 			}
 		}
 		
+		// Floors
 		gravity = -9.8f;
 		for(Wall floor : floors){
 			if(checkCollisionOnFloor(floor,cam1.eye)){
@@ -185,7 +170,9 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 	{
 		//do all actual drawing and rendering here
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
-		for(int viewNum = 0; viewNum < 2; viewNum++ ){
+		for(int viewNum = 0; viewNum < 3; viewNum++ ){
+			
+			// Setting up the cameras
 			if(viewNum == 0){
 				Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 				cam1.perspectiveProjection(fov, 2.0f, 0.1f, 100.0f);
@@ -193,9 +180,7 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 				shader.setProjectionMatrix(cam1.getProjectionMatrix());
 				shader.setEyePosition(cam1.eye.x, cam1.eye.y, cam1.eye.z, 1.0f);
 				mouseInput();
-
-				
-			}else{
+			}else if(viewNum == 1){
 				Gdx.gl.glViewport(3*Gdx.graphics.getWidth()/4,2*Gdx.graphics.getHeight()/3, Gdx.graphics.getWidth()/4,Gdx.graphics.getHeight()/3);
 				orthoCam.look(new Point3D(cam1.eye.x,10.0f,cam1.eye.z),cam1.eye,new Vector3D(0,0,-1));
 				shader.setViewMatrix(orthoCam.getViewMatrix());
@@ -205,80 +190,113 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 				Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
 				Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 				Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
+			}else{
+				Gdx.gl.glViewport(0,0, Gdx.graphics.getWidth(),1*Gdx.graphics.getHeight()/8);
+				orthoCam.look(new Point3D(0,5,0),new Point3D(0,0,0),new Vector3D(0,0,-1));
+				shader.setViewMatrix(orthoCam.getViewMatrix());
+				shader.setProjectionMatrix(orthoCam.getProjectionMatrix());
+				
+				Gdx.gl.glScissor(0,0, Gdx.graphics.getWidth(),1*Gdx.graphics.getHeight()/8);
+				Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
+				Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+				Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
 			}
 			
 			
-			ModelMatrix.main.loadIdentityMatrix();
-			shader.setLightPosition(0.0f, 8.0f, 3.0f, 1.0f);
-			shader.setLightColor(0.4f, 0.4f, 0.4f, 1.0f);
-			shader.setGlobalAmbient(0.3f, 0.25f, 0.25f, 1.0f);
-
-			// Walls
-			for(Wall w: walls){
+			// Rendering lights and objects
+			if(viewNum != 2){
 				ModelMatrix.main.loadIdentityMatrix();
-				shader.setMaterialDiffuse(w.color.r,  w.color.g,  w.color.b, 1.0f);
-				shader.setMaterialShininess(50.0f);
-				shader.setMaterialEmission(0.0f, 0.0f, 0.0f, 1.0f);
-				ModelMatrix.main.pushMatrix();
-				ModelMatrix.main.addTranslation(w.pos.x, w.pos.y, w.pos.z);
-				ModelMatrix.main.addScale(w.scale.x, w.scale.y, w.scale.z);
-				shader.setModelMatrix(ModelMatrix.main.getMatrix());
-				BoxGraphic.drawSolidCube();
-				ModelMatrix.main.popMatrix();
-			}
-			for(Wall w: floors){
-				ModelMatrix.main.loadIdentityMatrix();
-				shader.setMaterialDiffuse(w.color.r,  w.color.g,  w.color.b, 1.0f);
-				shader.setMaterialShininess(50.0f);
-				shader.setMaterialEmission(0.0f, 0.0f, 0.0f, 1.0f);
-				ModelMatrix.main.pushMatrix();
-				ModelMatrix.main.addTranslation(w.pos.x, w.pos.y, w.pos.z);
-				ModelMatrix.main.addScale(w.scale.x, w.scale.y, w.scale.z);
-				shader.setModelMatrix(ModelMatrix.main.getMatrix());
-				BoxGraphic.drawSolidCube();
-				ModelMatrix.main.popMatrix();
-			}
-
-			// Diamonds
-			for(Coin c: coins){
-				if(!c.pickedUp){
+				shader.setLightPosition(0.0f, 8.0f, 3.0f, 1.0f);
+				shader.setLightColor(0.4f, 0.4f, 0.4f, 1.0f);
+				shader.setGlobalAmbient(0.3f, 0.25f, 0.25f, 1.0f);
+	
+				// Walls
+				for(Wall w: walls){
 					ModelMatrix.main.loadIdentityMatrix();
-					shader.setMaterialDiffuse(c.color.r,  c.color.g,  c.color.b, 1.0f);
-					shader.setMaterialShininess(5.0f);
-					shader.setMaterialEmission(0.3f, 0.3f, 0.3f, 1.0f);
+					shader.setMaterialDiffuse(w.color.r,  w.color.g,  w.color.b, 1.0f);
+					shader.setMaterialShininess(50.0f);
+					shader.setMaterialEmission(0.0f, 0.0f, 0.0f, 1.0f);
 					ModelMatrix.main.pushMatrix();
-					ModelMatrix.main.addTranslation(c.pos.x, c.pos.y, c.pos.z);
-					ModelMatrix.main.addRotationY(c.rotation.y);
-					ModelMatrix.main.addScale(c.scale.x, c.scale.y, c.scale.z);
+					ModelMatrix.main.addTranslation(w.pos.x, w.pos.y, w.pos.z);
+					ModelMatrix.main.addScale(w.scale.x, w.scale.y, w.scale.z);
+					shader.setModelMatrix(ModelMatrix.main.getMatrix());
+					BoxGraphic.drawSolidCube();
+					ModelMatrix.main.popMatrix();
+				}
+				
+				// Floors
+				for(Wall w: floors){
+					ModelMatrix.main.loadIdentityMatrix();
+					shader.setMaterialDiffuse(w.color.r,  w.color.g,  w.color.b, 1.0f);
+					shader.setMaterialShininess(50.0f);
+					shader.setMaterialEmission(0.0f, 0.0f, 0.0f, 1.0f);
+					ModelMatrix.main.pushMatrix();
+					ModelMatrix.main.addTranslation(w.pos.x, w.pos.y, w.pos.z);
+					ModelMatrix.main.addScale(w.scale.x, w.scale.y, w.scale.z);
+					shader.setModelMatrix(ModelMatrix.main.getMatrix());
+					BoxGraphic.drawSolidCube();
+					ModelMatrix.main.popMatrix();
+				}
+	
+				// Diamonds
+				for(Coin c: coins){
+					if(!c.pickedUp){
+						ModelMatrix.main.loadIdentityMatrix();
+						shader.setMaterialDiffuse(c.color.r,  c.color.g,  c.color.b, 1.0f);
+						shader.setMaterialShininess(5.0f);
+						shader.setMaterialEmission(0.3f, 0.3f, 0.3f, 1.0f);
+						ModelMatrix.main.pushMatrix();
+						ModelMatrix.main.addTranslation(c.pos.x, c.pos.y, c.pos.z);
+						ModelMatrix.main.addRotationY(c.rotation.y);
+						ModelMatrix.main.addScale(c.scale.x, c.scale.y, c.scale.z);
+						shader.setModelMatrix(ModelMatrix.main.getMatrix());
+						SphereGraphic.drawSolidSphere();
+						ModelMatrix.main.popMatrix();
+					}
+				}
+				
+				// Elevator
+				ModelMatrix.main.loadIdentityMatrix();
+				shader.setMaterialDiffuse(elevator.color.r,  elevator.color.g,  elevator.color.b, 1.0f);
+				shader.setMaterialShininess(50.0f);
+				shader.setMaterialEmission(0.0f, 0.0f, 0.0f, 1.0f);
+				ModelMatrix.main.pushMatrix();
+				ModelMatrix.main.addTranslation(elevator.pos.x, elevator.pos.y, elevator.pos.z);
+				ModelMatrix.main.addScale(elevator.scale.x, elevator.scale.y, elevator.scale.z);
+				shader.setModelMatrix(ModelMatrix.main.getMatrix());
+				BoxGraphic.drawSolidCube();
+				ModelMatrix.main.popMatrix();
+	
+				if(viewNum == 1){
+					ModelMatrix.main.loadIdentityMatrix();
+					shader.setMaterialDiffuse(0.16f, 0.67f, 0.16f, 1.0f);
+					shader.setMaterialShininess(50.0f);
+					shader.setMaterialEmission(0.0f, 0.0f, 0.0f, 1.0f);
+					ModelMatrix.main.pushMatrix();
+					ModelMatrix.main.addTranslation(cam1.eye.x,cam1.eye.y,cam1.eye.z);
+					ModelMatrix.main.addScale(0.5f, 0.2f, 0.5f);
+	
 					shader.setModelMatrix(ModelMatrix.main.getMatrix());
 					SphereGraphic.drawSolidSphere();
 					ModelMatrix.main.popMatrix();
 				}
 			}
-			
-			ModelMatrix.main.loadIdentityMatrix();
-			shader.setMaterialDiffuse(elevator.color.r,  elevator.color.g,  elevator.color.b, 1.0f);
-			shader.setMaterialShininess(50.0f);
-			shader.setMaterialEmission(0.0f, 0.0f, 0.0f, 1.0f);
-			ModelMatrix.main.pushMatrix();
-			ModelMatrix.main.addTranslation(elevator.pos.x, elevator.pos.y, elevator.pos.z);
-			ModelMatrix.main.addScale(elevator.scale.x, elevator.scale.y, elevator.scale.z);
-			shader.setModelMatrix(ModelMatrix.main.getMatrix());
-			BoxGraphic.drawSolidCube();
-			ModelMatrix.main.popMatrix();
-
-			if(viewNum == 1){
-				ModelMatrix.main.loadIdentityMatrix();
-				shader.setMaterialDiffuse(1.0f, 0, 0, 1.0f);
-				shader.setMaterialShininess(50.0f);
-				shader.setMaterialEmission(0.0f, 0.0f, 0.0f, 1.0f);
-				ModelMatrix.main.pushMatrix();
-				ModelMatrix.main.addTranslation(cam1.eye.x,cam1.eye.y,cam1.eye.z);
-				ModelMatrix.main.addScale(0.5f, 0.2f, 0.5f);
-
-				shader.setModelMatrix(ModelMatrix.main.getMatrix());
-				SphereGraphic.drawSolidSphere();
-				ModelMatrix.main.popMatrix();
+			else{
+				
+				// Coin bar
+				float coinPos = -3.5f;
+				for(int i = 0; i < numberOfCoins; i++){
+					ModelMatrix.main.loadIdentityMatrix();
+					shader.setMaterialDiffuse(1, 1, 1, 1.0f);
+					shader.setMaterialEmission(0.6f, 0.4f, 0.0f, 1.0f);
+					ModelMatrix.main.pushMatrix();
+					ModelMatrix.main.addTranslation(coinPos, 0, 0);
+					ModelMatrix.main.addScale(0.2f, 0.5f, 3.0f);
+					shader.setModelMatrix(ModelMatrix.main.getMatrix());
+					SphereGraphic.drawSolidSphere();
+					ModelMatrix.main.popMatrix();
+					coinPos+=0.5f;
+				}
 			}
 		}			
 	}
@@ -286,7 +304,6 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 	@Override
 	public void render () {
 		
-		//put the code inside the update and display methods, depending on the nature of the code
 		update();
 		display();		
 	}
@@ -348,34 +365,48 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		walls.add(new Wall(new Point3D(-5, 2.5f, -15.0f), new Point3D(2.0f, 5.0f, 40.0f), wallColor));
 		walls.add(new Wall(new Point3D(5, 2.5f, -15.0f), new Point3D(2.0f, 5.0f, 40.0f),wallColor));
 		walls.add(new Wall(new Point3D(0, 2.5f, 5), new Point3D(12.0f, 5.0f, 2.0f),wallColor));
-		
-		
-		
+		walls.add(new Wall(new Point3D(5.0f, 2.5f, -45), new Point3D(20.0f, 5.0f, 2.0f),wallColor));
+		walls.add(new Wall(new Point3D(8.0f, 2.5f, -35), new Point3D(14.0f, 5.0f, 2.0f),wallColor));
+		walls.add(new Wall(new Point3D(15.0f, 2.5f, -40), new Point3D(2.0f, 5.0f, 12.0f),wallColor));
+		walls.add(new Wall(new Point3D(-5.0f, 2.5f, -40), new Point3D(2.0f, 5.0f, 12.0f),wallColor));
+
 		// Door1
 		walls.add(new Wall(new Point3D(2.5f, 2.5f, 0), new Point3D(4.0f, 5.0f, 1.0f),wallColor));
 		walls.add(new Wall(new Point3D(-2.5f, 2.5f, 0), new Point3D(4.0f, 5.0f, 1.0f),wallColor));
 		walls.add(new Wall(new Point3D(0, 4.0f, 0), new Point3D(1.0f, 2.0f, 1.0f),wallColor));
 
-		
 		// Door2
 		walls.add(new Wall(new Point3D(2.5f, 2.5f, -10.0f), new Point3D(4.0f, 5.0f, 1.0f),wallColor));
 		walls.add(new Wall(new Point3D(-2.5f, 2.5f, -10.0f), new Point3D(4.0f, 5.0f, 1.0f),wallColor));
 		walls.add(new Wall(new Point3D(0, 4.0f, -10.0f), new Point3D(1.0f, 2.0f, 1.0f),wallColor));
 
+		// Door3
+		walls.add(new Wall(new Point3D(2.5f, 2.5f, -20.0f), new Point3D(4.0f, 5.0f, 1.0f),wallColor));
+		walls.add(new Wall(new Point3D(-2.5f, 2.5f, -20.0f), new Point3D(4.0f, 5.0f, 1.0f),wallColor));
+		walls.add(new Wall(new Point3D(0, 4.0f, -20.0f), new Point3D(1.0f, 2.0f, 1.0f),wallColor));
 		
 		// Floor
 		floors.add(new Wall(new Point3D(0, 0, -5), new Point3D(10.0f, 1.0f, 20.0f),floorColor));
 		floors.add(new Wall(new Point3D(0, 0, -25), new Point3D(10.0f, 1.0f, 20.0f),floorColor));
 		floors.add(new Wall(new Point3D(0, 1.0f, -25), new Point3D(8.0f, 2.0f, 20.0f),floorColor));
+		floors.add(new Wall(new Point3D(5.0f, 1.0f, -40), new Point3D(20.0f, 2.0f, 10.0f),floorColor));
 
-
-		
 		// Coins
 		coins.add(new Coin(new Point3D(3,1,3), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
 		coins.add(new Coin(new Point3D(-3,1,3), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
 		coins.add(new Coin(new Point3D(3,1,-3), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
 		coins.add(new Coin(new Point3D(-3,1,-3), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
-
+		coins.add(new Coin(new Point3D(-3,1,-8), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
+		coins.add(new Coin(new Point3D(3,1,-8), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
+		coins.add(new Coin(new Point3D(-3,1,-13), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
+		coins.add(new Coin(new Point3D(3,1,-13), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
+		coins.add(new Coin(new Point3D(0,2.5f,-18), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
+		coins.add(new Coin(new Point3D(0,2.5f,-25), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
+		coins.add(new Coin(new Point3D(0,2.5f,-30), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
+		coins.add(new Coin(new Point3D(-2,2.5f,-40), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
+		coins.add(new Coin(new Point3D(4,2.5f,-40), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
+		coins.add(new Coin(new Point3D(8,2.5f,-40), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
+		coins.add(new Coin(new Point3D(10,2.5f,-40), new Point3D(0.03f,0.2f,0.2f),new Point3D(0,0,0),150.0f,coinColor));
 
 		//Elevator
 		elevator = new Wall(new Point3D(0, 0.4f, -14.5f), new Point3D(1.0f, 0.2f, 1.0f),wallColor);
@@ -529,13 +560,13 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 			}
 			if(d == 5){
 				pos.y = maxY;
+				return true;
+
 			}
 			if(d == 6){
-				
 				pos.y = minY;
 			}
 			
-			return true;
 		}
 		return false;
 	}
@@ -553,6 +584,8 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 			&& pos.z >= minZ && pos.z <= maxZ
 			&& pos.y >= minY && pos.y <= maxY){
 			coin.pickedUp = true;
+			numberOfCoins++;
+			coin = null;
 		}
 	}
 	
