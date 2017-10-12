@@ -206,10 +206,19 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 			// Rendering lights and objects
 			if(viewNum != 2){
 				ModelMatrix.main.loadIdentityMatrix();
-				shader.setLightPosition(0.0f, 8.0f, 3.0f, 1.0f);
-				shader.setLightColor(0.4f, 0.4f, 0.4f, 1.0f);
+				shader.setLightPosition(0.0f, 8.0f, 5.0f, 1.0f);
+				shader.setLightColor(0.3f, 0.3f, 0.3f, 1.0f);
+				
+				shader.setLight2Position(0.0f, 8.0f, -20.0f, 1.0f);
+				shader.setLight2Color(0.3f, 0.3f, 0.3f, 1.0f);
+				
+				shader.setDirLightPosition(5.0f, 8.0f, -40.0f, 1.0f);
+				shader.setDirLightColor(0.3f, 0.3f, 0.3f, 1.0f);
+				
 				shader.setGlobalAmbient(0.3f, 0.25f, 0.25f, 1.0f);
-	
+				ModelMatrix.main.loadIdentityMatrix();
+				
+				
 				// Walls
 				for(Wall w: walls){
 					ModelMatrix.main.loadIdentityMatrix();
@@ -287,8 +296,8 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 				float coinPos = -3.5f;
 				for(int i = 0; i < numberOfCoins; i++){
 					ModelMatrix.main.loadIdentityMatrix();
-					shader.setMaterialDiffuse(1, 1, 1, 1.0f);
-					shader.setMaterialEmission(0.6f, 0.4f, 0.0f, 1.0f);
+					shader.setMaterialDiffuse(1, 0.8f, 0, 1.0f);
+					shader.setMaterialEmission(0.3f, 0.3f, 0.3f, 1.0f);
 					ModelMatrix.main.pushMatrix();
 					ModelMatrix.main.addTranslation(coinPos, 0, 0);
 					ModelMatrix.main.addScale(0.2f, 0.5f, 3.0f);

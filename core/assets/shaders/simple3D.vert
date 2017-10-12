@@ -13,10 +13,16 @@ uniform mat4 u_projectionMatrix;
 uniform vec4 u_eyePosition;
 
 uniform vec4 u_lightPosition;
+uniform vec4 u_lightPosition2;
+uniform vec4 u_dirLightPosition;
 
 varying vec4 v_normal;
 varying vec4 v_s;
+varying vec4 v_s2;
+varying vec4 v_s3;
 varying vec4 v_h;
+varying vec4 v_h2;
+varying vec4 v_h3;
 
 void main()
 {
@@ -28,16 +34,17 @@ void main()
 
 	//Lighting
 	v_s = u_lightPosition - position;
+	v_s2 = u_lightPosition2 - position;
+	v_s3 = u_dirLightPosition;
 	vec4 v = u_eyePosition - position;
 	
 	v_h = v_s + v;
+	v_h2 = v_s2 + v;
+	v_h3 = v_s3 + v;
 	
 	v_normal = normal; 
 	
 	position = u_viewMatrix * position;
-	//normal = u_viewMatrix * normal;
-
-	//v_color = (dot(normal, vec4(0,0,1,0)) / length(normal)) * u_color;
 	
 
 	gl_Position = u_projectionMatrix * position;
