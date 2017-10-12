@@ -81,6 +81,8 @@ public class Camera
 		n.set(t.x * s + n.x * c,  t.y * s + n.y * c,  t.z * s + n.z * c);
 	}
 	
+	
+	
 	public void pitch(float angle) {
 		float radians = angle * (float)Math.PI / 180.0f;
 		float c = (float)Math.cos(radians);

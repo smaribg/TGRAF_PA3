@@ -23,7 +23,10 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 	private float velocity = 0.0f;
 	private float gravity = -9.8f;
 	private ArrayList<Wall> walls;
-	boolean ortho = false;
+	boolean mouse = false;
+	float verticalAngle = 0;
+	float horizontalAngle = 0;
+	
 
 
 	//private ModelMatrix modelMatrix;
@@ -67,9 +70,11 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		//OrthographicProjection3D(-2, 2, -2, 2, 1, 100);
 		cam1 = new Camera();
 		cam1.look(new Point3D(-3,4,-3), new Point3D(0,4,0), new Vector3D(0,1,0));
+		cam1.look(new Point3D(-3,4,-3), new Point3D(0,4,0), new Vector3D(0,1,0));
+
 		
 		cam2 = new Camera();
-		cam2.look(new Point3D(-3,6,-3), new Point3D(0,4,0), new Vector3D(0,1,0));
+		cam2.look(new Point3D(-3,4,-3), new Point3D(0,4,0), new Vector3D(0,1,0));
 		
 		setupWalls();	
 	}
@@ -127,7 +132,10 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 			fov += 30.0f * deltaTime;
 		}
 		if(Gdx.input.isKeyJustPressed(Input.Keys.V)) {
-			ortho = !ortho;
+			mouse = !mouse;
+		}
+		if(Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+			System.exit(0);
 		}
 	}
 	
@@ -167,8 +175,10 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		velocity +=gravity * deltaTime;
 		cam1.eye.y += velocity * deltaTime;
 		
+		velocity +=gravity * deltaTime;
+		cam2.eye.y += velocity * deltaTime;
 		
-		
+
 	}
 	
 	private void display()
@@ -176,17 +186,40 @@ public class LabFirst3DGame extends ApplicationAdapter implements InputProcessor
 		//do all actual drawing and rendering here
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 		
-		if(!ortho){
-			Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-			cam1.perspectiveProjection(fov, 2.0f, 0.1f, 100.0f);
-			shader.setViewMatrix(cam1.getViewMatrix());
-			shader.setProjectionMatrix(cam1.getProjectionMatrix());
-		}else{
-			Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-			cam2.perspectiveProjection(fov, 2.0f, 0.1f, 100.0f);
-			shader.setViewMatrix(cam2.getViewMatrix());
-			shader.setProjectionMatrix(cam2.getProjectionMatrix());
+		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+		cam1.perspectiveProjection(fov, 2.0f, 0.1f, 100.0f);
+		shader.setViewMatrix(cam1.getViewMatrix());
+		shader.setProjectionMatrix(cam1.getProjectionMatrix());
+		if(mouse){
+			
+			// Mouse
+			float deltaTime = Gdx.graphics.getDeltaTime();
+			int xpos, ypos;
+			xpos = Gdx.input.getX();
+			ypos = Gdx.input.getY();
+			Gdx.input.setCursorPosition(Gdx.graphics.getWidth()/2, Gdx.graphics.getHeight()/2);
+			Gdx.input.setCursorCatched(true);
+			horizontalAngle += 0.05f * deltaTime * (float)(Gdx.graphics.getWidth()/2 - xpos );
+			verticalAngle   += 0.05f * deltaTime * (float)( Gdx.graphics.getHeight()/2 - ypos );
+			Vector3D direction = new Vector3D(
+					(float)(Math.cos(verticalAngle) * Math.sin(horizontalAngle)),
+					(float)Math.sin(verticalAngle),
+					(float)(Math.cos(verticalAngle) * Math.cos(horizontalAngle))
+					);
+			
+			Vector3D right = new Vector3D(
+					(float)Math.sin(horizontalAngle - 3.14f/2.0f),
+					0,
+					(float)Math.cos(horizontalAngle - 3.14f/2.0f)
+					);
+			Vector3D up = right.cross(direction);
+			Point3D p = new Point3D();
+			p.set(cam1.eye.x, cam1.eye.y, cam1.eye.z);
+			p.add(direction);
+			cam1.look(cam1.eye, p, up);
+			
 		}
+
 
 		
 		ModelMatrix.main.loadIdentityMatrix();
